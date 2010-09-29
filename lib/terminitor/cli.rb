@@ -40,6 +40,7 @@ module Terminitor
     method_option :editor,  :type => :string, :default => nil,    :aliases => '-c'
     method_option :syntax,  :type => :string, :default => 'term', :aliases => '-s'
     def edit(project="")
+      puts options.inspect
       syntax = project.empty? ? 'term' : options[:syntax] # force Termfile to use term syntax
       path =  config_path(project, syntax.to_sym)
       template "templates/example.#{syntax}.tt", path, :skip => true
@@ -48,9 +49,11 @@ module Terminitor
     
     desc "open PROJECT_NAME", "this is deprecated. please use 'edit' instead"
     method_option :root,    :type => :string, :default => '.', :aliases => '-r'
+    method_option :syntax,  :type => :string, :default => 'term', :aliases => '-s'
     def open(project="")
       say "'open' is now deprecated. Please use 'edit' instead"
-      invoke :edit, [project],:root => options[:root]
+      invoke :edit, [project], { :root => options[:root],
+                                 :syntax => options[:syntax]}
     end
     
     
