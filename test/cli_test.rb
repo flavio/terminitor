@@ -4,13 +4,14 @@ context "Terminitor" do
   setup     { @yaml = File.read(File.expand_path('../fixtures/foo.yml', __FILE__)) }
   setup     { @template = File.read(File.expand_path('../../lib/templates/example.yml.tt', __FILE__)) }
   setup     { FakeFS.activate! }
+  setup     { FileUtils.mkdir_p(File.join(ENV["HOME"],'.terminitor')) }
   teardown  { FakeFS.deactivate! }
 
-  context "shows the help" do
+  context "help" do
     setup { capture(:stdout) { Terminitor::Cli.start(['-h']) } }
     asserts_topic.matches   %r{start PROJECT_NAME}
     asserts_topic.matches   %r{setup}
-    asserts_topic.matches   %r{open PROJECT_NAME}
+    asserts_topic.matches   %r{edit PROJECT_NAME}
   end
 
   context "list" do
@@ -27,71 +28,88 @@ context "Terminitor" do
     asserts("creates .terminitor") { File.exists?("#{ENV['HOME']}/.terminitor") }
   end
 
-  context "open" do
+  context "edit" do
     setup     { FakeFS.deactivate! }
     setup     { `rm -rf #{ENV['HOME']}/.terminitor/test_foo_bar2.yml`}
-
+    setup     { `rm -rf #{ENV['HOME']}/.terminitor/test_foo_bar2.term`}
     teardown  { `rm -rf /tmp/sample_project` }
+    teardown  { `rm -rf #{ENV['HOME']}/.terminitor/test_foo_bar2.yml`}
+    teardown  { `rm -rf #{ENV['HOME']}/.terminitor/test_foo_bar2.term`}
+    context "for project" do
+      context "for yaml" do
+        setup { mock.instance_of(Terminitor::Cli).open_in_editor("#{ENV['HOME']}/.terminitor/test_foo_bar2.yml",nil) { true }.once }
+        setup { capture(:stdout) { Terminitor::Cli.start(['edit','test_foo_bar2', '-s=yml']) } }
+        asserts_topic.matches %r{create}
+        asserts_topic.matches %r{test_foo_bar2.yml}
+        asserts("has term template") { File.read(File.join(ENV['HOME'],'.terminitor','test_foo_bar2.yml')) }.matches %r{- tab1}
+      end
 
-    context "for project yaml" do
-      setup { mock.instance_of(Terminitor::Cli).open_in_editor("#{ENV['HOME']}/.terminitor/test_foo_bar2.yml",nil) { true }.once }
-      setup { capture(:stdout) { Terminitor::Cli.start(['open','test_foo_bar2']) } }
-      asserts_topic.matches %r{create}
-      asserts_topic.matches %r{test_foo_bar2.yml}
+      context "for term" do
+        setup { mock.instance_of(Terminitor::Cli).open_in_editor("#{ENV['HOME']}/.terminitor/test_foo_bar2.term",nil) { true }.once }
+        setup { capture(:stdout) { Terminitor::Cli.start(['edit','test_foo_bar2', '-s=term']) } }
+        asserts_topic.matches %r{create}
+        asserts_topic.matches %r{test_foo_bar2.term}
+        asserts("has term template") { File.read(File.join(ENV['HOME'],'.terminitor','test_foo_bar2.term')) }.matches %r{setup}
+      end
+
     end
 
     context "for Termfile" do
-      context "with open" do
-        setup { mock.instance_of(Terminitor::Cli).open_in_editor("/tmp/sample_project/Termfile",nil) { true }.once }
-        setup { capture(:stdout) { Terminitor::Cli.start(['open','-r=/tmp/sample_project']) } }
-        asserts_topic.matches %r{create}
-        asserts_topic.matches %r{Termfile}
-      end
-
-      context "with create" do
-        setup { mock.instance_of(Terminitor::Cli).invoke(:open, [], :root => '/tmp/sample_project') { true }.once }
-        asserts('calls open') { capture(:stdout) { Terminitor::Cli.start(['create','-r=/tmp/sample_project']) }   }
-      end
-
-
-      context "with -c(editor) flag" do
-        setup { FileUtils.mkdir_p('/tmp/sample_project')  }
-        setup { @path = '/tmp/sample_project/Termfile'    }
-        setup { File.open(@path,"w") { |f| f.puts @yaml } }
-        setup { mock.instance_of(Terminitor::Cli).open_in_editor(@path,'nano') { true }.once }
-        asserts("runs nano") { capture(:stdout) { Terminitor::Cli.start(['open','-r=/tmp/sample_project','-c=nano']) } }
-      end
-
+      setup { mock.instance_of(Terminitor::Cli).open_in_editor("/tmp/sample_project/Termfile",nil) { true }.once }
+      setup { capture(:stdout) { Terminitor::Cli.start(['edit','-s=yml','-r=/tmp/sample_project']) } }
+      asserts_topic.matches %r{create}
+      asserts_topic.matches %r{Termfile}
+      asserts("has term template") { File.read('/tmp/sample_project/Termfile') }.matches %r{setup}
     end
 
-    context "delete" do
-
-      context "directory Termfile" do
-        setup { FileUtils.mkdir_p('/tmp/sample_project')}
-        setup { FileUtils.touch("/tmp/sample_project/Termfile") }
-        setup { capture(:stdout) { Terminitor::Cli.start(['delete',"-r=/tmp/sample_project"]) } }
-        asserts("Termfile") { File.exists?("/tmp/sample_project/Termfile") }.not!
-      end
-
-      context "global script" do
-        setup { FileUtils.touch("#{ENV['HOME']}/.terminitor/delete_this.yml") }
-        setup { capture(:stdout) { Terminitor::Cli.start(['delete','delete_this']) } }
-        asserts(" script") { File.exists?("#{ENV['HOME']}/.terminitor/delete_this.yml") }.not!
-      end
+    context "for editor flag" do
+      setup { FileUtils.mkdir_p('/tmp/sample_project')  }
+      setup { mock.instance_of(Terminitor::Cli).open_in_editor('/tmp/sample_project/Termfile','nano') { true }.once }
+      asserts("runs nano") { capture(:stdout) { Terminitor::Cli.start(['edit','-r=/tmp/sample_project','-c=nano']) } }
     end
 
+  end
 
+  context "create" do
+    setup { mock.instance_of(Terminitor::Cli).invoke(:edit, [], :root => '/tmp/sample_project') { true }.once }
+    asserts('calls open') { capture(:stdout) { Terminitor::Cli.start(['create','-r=/tmp/sample_project']) }   }
+  end
+
+
+  context "open" do
+    setup { mock.instance_of(Terminitor::Cli).invoke(:edit, [""], :root => '/tmp/sample_project') { true }.once }
+    setup { capture(:stdout) { Terminitor::Cli.start(['open','-r=/tmp/sample_project']) } }
+    asserts_topic.matches %r{'open' is now deprecated. Please use 'edit' instead}
+  end
+
+  context "delete" do
+    context "directory Termfile" do
+      setup { FileUtils.mkdir_p('/tmp/sample_project') }
+      setup { FileUtils.touch("/tmp/sample_project/Termfile") }
+      setup { capture(:stdout) { Terminitor::Cli.start(['delete',"-r=/tmp/sample_project"]) } }
+      asserts("Termfile") { File.exists?("/tmp/sample_project/Termfile") }.not!
+    end
+
+    context "for yaml" do
+      setup { FileUtils.touch("#{ENV['HOME']}/.terminitor/delete_this.yml") }
+      setup { capture(:stdout) { Terminitor::Cli.start(['delete','delete_this', '-s=yml']) } }
+      asserts(" script") { File.exists?("#{ENV['HOME']}/.terminitor/delete_this.yml") }.not!
+    end
+
+    context "for term" do
+      setup { FileUtils.touch("#{ENV['HOME']}/.terminitor/delete_this.term") }
+      setup { capture(:stdout) { Terminitor::Cli.start(['delete','delete_this']) } }
+      asserts(" script") { File.exists?("#{ENV['HOME']}/.terminitor/delete_this.term") }.not!
+    end
   end
 
   context "start" do
 
-    # TODO no longer support yaml syntax
-    context "for Termfile" do
-      # setup { FileUtils.mkdir_p('/tmp/sample_project') }
-      # setup { @path = '/tmp/sample_project/Termfile' }
-      # setup { File.open(@path,"w") { |f| f.puts @yaml } }
-      # setup { mock.instance_of(Terminitor::Cli).do_project(@path) { true }.once }
-      # asserts("runs .terminit") { capture(:stdout) { Terminitor::Cli.start(['start','-r=/tmp/sample_project']) } }
+    context "with no core returned" do
+      setup { mock.instance_of(Terminitor::Cli).execute_core(anything) { nil } }
+      setup { FileUtils.touch("#{ENV['HOME']}/.terminitor/delete_this.term") }
+      setup { capture(:stdout) { Terminitor::Cli.start(['start', 'delete_this']) } }
+      asserts_topic.matches %r{No suitable core found!}
     end
 
     context "with invalid project" do
