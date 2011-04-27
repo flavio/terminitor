@@ -1,7 +1,16 @@
 Terminitor
 ===========
 
-Terminitor automates your development workflow setup. Less time setting up,  more time getting things done.
+Terminitor automates your development workflow setup. Less time setting up, more time getting things done.
+
+Upgrading Terminitor from 0.4.1 and under
+------------------------------------------
+
+For those upgrading from Terminitor 0.4.1, please run:
+
+    $ terminitor update
+
+This will move your terminitor files to the new directory located at .config/terminitor 
 
 Installation
 ------------
@@ -45,7 +54,7 @@ This will open your default editor (set through the $TERM_EDITOR or $EDITOR vari
 
 #### YAML Syntax ( Legacy ) ####
     
-    # ~/.terminitor/foo.yml
+    # ~/.config/terminitor/foo.yml
     # you can make as many tabs as you wish...
     # tab names are actually arbitrary at this point too.
     ---
@@ -208,7 +217,7 @@ __windows__
 
 ### Running Terminitor Projects ###
 
-Once the project file has been declared to your satisfaction, simply execute any project defined in the `~/.terminitor` directory with:
+Once the project file has been declared to your satisfaction, simply execute any project defined in the `~/.config/terminitor` directory with:
 
     $ terminitor start foo
 
@@ -296,6 +305,7 @@ Cores allow Terminitor to operate on a variety of platforms. They abstract the g
 
  * MacCore        - Mac OS X Terminal
  * KonsoleCore    - KDE Konsole
+ * TerminatorCore - [Terminator](http://www.tenshu.net/terminator/)
  * ITermCore      - Mac OS X iTerm
 
 Feel free to contribute more cores so that Terminitor can support your terminal of choice :)
@@ -326,6 +336,19 @@ The fetch task only pulls off Github repositories at the moment. Later on, this 
 This feature is currently only available in Mac OS X at the moment.
 
 
+#### Terminator support ####
+
+This feature currently requires the "xdotool" utility to be installed and in
+the search path. The xdotool homepage is
+http://www.semicomplete.com/blog/projects/xdotool/.
+
+
+#### Windows suppport ####
+
+Windows support is currently limited to plain cmd.exe. It is also
+limited to only creating new windows, as cmd.exe does not support tabs.
+
+
 Authors
 -------
 
@@ -338,13 +361,19 @@ Contributors
 Thanks to the following people for their contributions so far:
 
  * Pat George      ([pcg79](https://github.com/pcg79)) for contributing a patch for when a project is not found.
+ * Tim Gossett     ([[MrGossett](https://github.com/MrGossett)) for a patch to fix comment reading
  * Flavio Castelli ([flavio](https://github.com/flavio)) for contributing Konsole(KDE) core.
  * Alexey Kuleshov ([kulesa](https://github.com/kulesa)) for contributing the terminal settings and terminal settings capture functionality
  * Arthur Gunn     ([gunn](https://github.com/gunn)) for contributing a path to support tab syntax and load path.
  * Elliot Winkler  ([mcmire](https://github.com/mcmire)) for adding 1.8.6 compatiblity and ensuring tabs open in order.
  * Justin Hilemen  ([bobthecow](https://github.com/bobthecow)) for fixing the list command to remove the term extensions.
- * recurser        ([recurser](https://github.com/recurser)) for adding basic iTerm support.
- 
+ * Dave Perrett    ([recurser](https://github.com/recurser)) for adding basic iTerm support.
+ * Ilkka Laukkanen ([ilkka](https://github.com/achiu/terminitor/commits/master?author=ilkka)) for Terminator core and other fixes
+ * Elia Schito     ([elia](https://github.com/achiu/terminitor/commits/master?author=elia)) for patch to allow usage of "&" for background operations
+ * Dotan J. Nahum  ([jondot](https://github.com/jondot)) for adding windows(cmd.exe) support
+ * Kyriacos Souroullas ([kyriacos](https://github.com/kyriacos) For removing params to support generic commands
+ * Jerry Cheung ([jch](https://github.com/jch)) For adding ignore for emac backups
+
 Acknowledgements
 -----------------
 

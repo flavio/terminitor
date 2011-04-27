@@ -18,6 +18,9 @@ class TestItem
 end
 
 context "Runner" do
+
+  helper(:terminitor_root) { |file| File.join(ENV['HOME'],'.config','terminitor', file) } 
+
   setup do 
     @yaml = File.read(File.expand_path('../fixtures/foo.yml', __FILE__))
     @template = File.read(File.expand_path('../../lib/templates/example.yml.tt', __FILE__))
@@ -28,22 +31,36 @@ context "Runner" do
 
 
   context "#find_core" do
-    if ENV['TERM_PROGRAM'] == 'iTerm.app'
-      should("have Darwin") { @test_runner.find_core('darwin') }.equals Terminitor::ItermCore
-    else
-      should("have Darwin") { @test_runner.find_core('darwin') }.equals Terminitor::MacCore
+
+    helper(:find_core) { |core| @test_runner.find_core core }
+
+    on_platform 'darwin' do
+      if ENV['TERM_PROGRAM'] == 'iTerm.app'
+        should("have iTerm") { find_core('darwin') }.equals Terminitor::ItermCore
+      else
+        should("have Terminal") { find_core('darwin') }.equals Terminitor::MacCore
+      end
     end
 
-    if platform?('linux') # TODO Gotta be a better way.
-      should("have KDE") { @test_runner.find_core('linux') }.equals Terminitor::KonsoleCore
+    on_platform 'linux' do # TODO Gotta be a better way.
+      if `which terminator`.chomp.empty?
+        should("have KDE") { find_core('linux') }.equals Terminitor::KonsoleCore
+      else
+        should("have terminator") { find_core('linux') }.equals Terminitor::TerminatorCore
+      end
     end
   end
   
   context "#capture_core" do 
-    if ENV['TERM_PROGRAM'] == 'iTerm.app'
-      should("have Darwin") { @test_runner.capture_core('darwin') }.equals Terminitor::ItermCapture
-    else
-      should("have Darwin") { @test_runner.capture_core('darwin') }.equals Terminitor::MacCapture
+
+    helper(:capture_core) { |core| @test_runner.capture_core core }
+
+    on_platform 'darwin' do
+      if ENV['TERM_PROGRAM'] == 'iTerm.app'
+        should("have iTerm") { capture_core('darwin') }.equals Terminitor::ItermCapture
+      else
+        should("have Terminal") { capture_core('darwin') }.equals Terminitor::MacCapture
+      end
     end
   end
 
@@ -79,23 +96,23 @@ context "Runner" do
   end
 
   context "#resolve_path" do
-    setup { FileUtils.mkdir_p(File.join(ENV['HOME'],'.terminitor')) }
+    setup { FileUtils.mkdir_p(File.join(ENV['HOME'],'.config','terminitor')) }
 
     should "return yaml" do
-      FileUtils.touch(File.join(ENV['HOME'],'.terminitor','test.yml'))
-      @test_runner.resolve_path('test')
-    end.equals File.join(ENV['HOME'],'.terminitor','test.yml')
+      FileUtils.touch terminitor_root('test.yml')
+      @test_runner.resolve_path('test') == terminitor_root('test.yml')
+    end
 
     should "return term" do
-      FileUtils.touch(File.join(ENV['HOME'],'.terminitor','test.term'))
-      FileUtils.rm(File.join(ENV['HOME'],'.terminitor','test.yml'))
-      @test_runner.resolve_path('test')
-    end.equals File.join(ENV['HOME'],'.terminitor','test.term')
+      FileUtils.touch terminitor_root('test.term')
+      FileUtils.rm terminitor_root('test.yml')
+      @test_runner.resolve_path('test') == terminitor_root('test.term')
+    end
 
 
     should "return Termfile" do
-      FileUtils.rm(File.join(ENV['HOME'],'.terminitor','test.yml'))
-      FileUtils.rm(File.join(ENV['HOME'],'.terminitor','test.term'))
+      FileUtils.rm terminitor_root('test.yml')
+      FileUtils.rm terminitor_root('test.term')
       FileUtils.touch("Termfile")
       mock(@test_runner).options { {:root => '.'} }
       @test_runner.resolve_path("")
@@ -104,8 +121,8 @@ context "Runner" do
 
     context "with nothing" do
       setup do
-        FileUtils.rm(File.join(ENV['HOME'],'.terminitor','test.yml'))
-        FileUtils.rm(File.join(ENV['HOME'],'.terminitor','test.term'))
+        FileUtils.rm terminitor_root('test.term')
+        FileUtils.rm terminitor_root('test.yml')
         FileUtils.rm("Termfile")
       end
       
@@ -121,8 +138,14 @@ context "Runner" do
   end
 
   context "config_path" do
-    should("have yaml") { @test_runner.config_path('test',:yml)   }.equals File.join(ENV['HOME'],'.terminitor','test.yml')
-    should("have term") { @test_runner.config_path('test', :term) }.equals File.join(ENV['HOME'],'.terminitor', 'test.term')
+
+    should("have yaml") do
+      @test_runner.config_path('test',:yml) == terminitor_root('test.yml')
+    end
+
+    should("have term") do
+      @test_runner.config_path('test', :term) == terminitor_root('test.term')
+    end
     
     should "have Termfile" do
       mock(@test_runner).options { {:root => '/tmp'} }
